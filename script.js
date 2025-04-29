@@ -3,7 +3,19 @@ const userInput = document.getElementById('userInput');
 const decisionImage = document.getElementById('decisionImage');
 const reasonText = document.getElementById('reasonText');
 
-const GROQ_API_KEY = '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'; // 🚨 正式部署請移除，改走後端 API
+// 儲存使用者上傳的圖片 URL
+let rejectImageUrls = [];
+let acceptImageUrls = [];
+
+document.getElementById('rejectImages').addEventListener('change', (event) => {
+  rejectImageUrls = Array.from(event.target.files).map(file => URL.createObjectURL(file));
+});
+
+document.getElementById('acceptImages').addEventListener('change', (event) => {
+  acceptImageUrls = Array.from(event.target.files).map(file => URL.createObjectURL(file));
+});
+
+const GROQ_API_KEY = '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'; // 🚨 部署時移除
 
 submitBtn.addEventListener('click', async () => {
   const userText = userInput.value.trim();
@@ -34,12 +46,11 @@ submitBtn.addEventListener('click', async () => {
             content: userText
           }
         ],
-        temperature: 0.9
+        temperature: 0.7
       })
     });
 
     const data = await response.json();
-
     if (!data.choices || !data.choices[0]?.message?.content) {
       reasonText.textContent = 'AI 回覆格式異常，請稍後再試。';
       return;
@@ -57,23 +68,30 @@ submitBtn.addEventListener('click', async () => {
 
     const reason = reasonLine.replace('理由：', '').trim();
 
-    // 設定圖片與訊息
+    // 顯示圖片與理由
     if (decision === '拒絕') {
-      decisionImage.src = 'reject.png';
-      reasonText.textContent = reason ; // 拒絕時顯示理由
+      if (rejectImageUrls.length > 0) {
+        const randomIndex = Math.floor(Math.random() * rejectImageUrls.length);
+        decisionImage.src = rejectImageUrls[randomIndex];
+      } else {
+        decisionImage.src = 'reject.png';
+      }
+      reasonText.textContent = reason || '未提供理由。';
+
     } else if (decision === '接受') {
-      decisionImage.src = 'ok.png';
-      reasonText.textContent = reason ; // 接受時顯示理由
+      if (acceptImageUrls.length > 0) {
+        const randomIndex = Math.floor(Math.random() * acceptImageUrls.length);
+        decisionImage.src = acceptImageUrls[randomIndex];
+      } else {
+        decisionImage.src = 'ok.png';
+      }
+      reasonText.textContent = reason || '未提供理由。';
+
     } else if (decision === '重新提問') {
       decisionImage.src = 'unknow.png';
-
-      // 根據 AI 回覆生成「重新提問」的訊息
-      const newPrompt = lines.find(line => line.startsWith('理由：')) || '';
-      const dynamicMessage = newPrompt.replace('理由：', '').trim() || '請說明清楚情況敘述等等。';
-
-      reasonText.textContent = dynamicMessage; // 重新提問時顯示動態訊息
+      reasonText.textContent = reason || '請說明清楚情況敘述等等。';
     } else {
-      decisionImage.src = ''; // fallback，防止出錯
+      decisionImage.src = '';
       reasonText.textContent = 'AI 回覆異常，無法判斷。';
     }
 
