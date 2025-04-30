@@ -8,17 +8,24 @@
 </head>
 <body>
   <h1>拒絕練習小工具</h1>
-  <label>上傳拒絕圖片（可多張）：<input type="file" id="rejectImages" multiple accept="image/*"></label>
-  <br>
-  <label>上傳接受圖片（可多張）：<input type="file" id="acceptImages" multiple accept="image/*"></label>
-  <br>
+  <div class="upload-box">
+    <label for="rejectImages">上傳拒絕圖片（可多張）：</label>
+    <input type="file" id="rejectImages" multiple accept="image/*" style="display: none;">
+    <button class="upload-btn">上傳照片</button>
+    <span class="file-status">未選擇檔案</span>
+  </div>
+  <div class="upload-box">
+    <label for="acceptImages">上傳接受圖片（可多張）：</label>
+    <input type="file" id="acceptImages" multiple accept="image/*" style="display: none;">
+    <button class="upload-btn">上傳照片</button>
+    <span class="file-status">未選擇檔案</span>
+  </div>
   <div class="container">
     <div class="box">
       <h2>輸入你的煩惱</h2>
       <textarea id="userInput" placeholder="例如：朋友邀我參加不想去的聚會..."></textarea>
       <button id="submitBtn">送出</button>
     </div>
-
     <div class="box">
       <h2>AI 建議</h2>
       <img id="decisionImage" src="" alt="AI 建議的圖片" />
