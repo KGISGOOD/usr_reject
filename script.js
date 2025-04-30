@@ -15,7 +15,8 @@ document.getElementById('acceptImages').addEventListener('change', (event) => {
   acceptImageUrls = Array.from(event.target.files).map(file => URL.createObjectURL(file));
 });
 
-const GROQ_API_KEY = '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'; // 🚨 部署時移除
+// 🚨 部署時務必移除 API 金鑰
+const GROQ_API_KEY = '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';
 
 submitBtn.addEventListener('click', async () => {
   const userText = userInput.value.trim();
@@ -27,6 +28,18 @@ submitBtn.addEventListener('click', async () => {
   reasonText.textContent = 'AI 正在思考中...';
   decisionImage.src = '';
 
+  // 強化 Prompt 格式要求
+  const prompt = `
+你是一個幫助人們判斷是否應該拒絕他人請求的助手，風格幽默但專業。
+請根據使用者的描述，判斷是否應該拒絕，並提供詳細理由。
+❗請「只用以下兩行格式」回覆，並「必須逐行開頭為『建議：』與『理由：』」：
+建議：（接受 / 拒絕 / 重新提問）
+理由：（請具體描述原因，風格可以幽默但需合理）
+請用繁體中文回答。
+
+使用者描述：${userText}
+`;
+
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -37,59 +50,46 @@ submitBtn.addEventListener('click', async () => {
       body: JSON.stringify({
         model: 'llama3-70b-8192',
         messages: [
-          {
-            role: 'system',
-            content: '你是一個幫助人們判斷是否應該拒絕他人請求的助手。請根據使用者的描述，判斷是否應該拒絕，並提供理由。請用「建議：接受/拒絕/重新提問」和「理由：...」這兩行格式回覆。'
-          },
-          {
-            role: 'user',
-            content: userText
-          }
+          { role: 'user', content: prompt }
         ],
-        temperature: 0.7
+        temperature: 0.9
       })
     });
 
     const data = await response.json();
+
     if (!data.choices || !data.choices[0]?.message?.content) {
       reasonText.textContent = 'AI 回覆格式異常，請稍後再試。';
       return;
     }
 
     const aiReply = data.choices[0].message.content;
-    const lines = aiReply.split('\n');
-    const decisionLine = lines.find(line => line.startsWith('建議：')) || '';
-    const reasonLine = lines.find(line => line.startsWith('理由：')) || '';
+    console.log('AI 原始回覆：', aiReply); // ✅ 建議開發時保留
 
-    const decision = decisionLine.includes('拒絕') ? '拒絕'
-                  : decisionLine.includes('接受') ? '接受'
-                  : decisionLine.includes('重新提問') ? '重新提問'
-                  : '未知';
+    // 正則表達式擷取建議與理由
+    const decisionMatch = aiReply.match(/建議[:：]?\s*(接受|拒絕|重新提問)/);
+    const reasonMatch = aiReply.match(/理由[:：]?\s*(.+)/);
 
-    const reason = reasonLine.replace('理由：', '').trim();
+    const decision = decisionMatch ? decisionMatch[1] : '未知';
+    const reason = reasonMatch ? reasonMatch[1].trim() : '未提供理由。';
 
     // 顯示圖片與理由
     if (decision === '拒絕') {
-      if (rejectImageUrls.length > 0) {
-        const randomIndex = Math.floor(Math.random() * rejectImageUrls.length);
-        decisionImage.src = rejectImageUrls[randomIndex];
-      } else {
-        decisionImage.src = 'reject.png';
-      }
-      reasonText.textContent = reason || '未提供理由。';
+      decisionImage.src = rejectImageUrls.length > 0
+        ? rejectImageUrls[Math.floor(Math.random() * rejectImageUrls.length)]
+        : 'reject.png';
+      reasonText.textContent = reason;
 
     } else if (decision === '接受') {
-      if (acceptImageUrls.length > 0) {
-        const randomIndex = Math.floor(Math.random() * acceptImageUrls.length);
-        decisionImage.src = acceptImageUrls[randomIndex];
-      } else {
-        decisionImage.src = 'ok.png';
-      }
-      reasonText.textContent = reason || '未提供理由。';
+      decisionImage.src = acceptImageUrls.length > 0
+        ? acceptImageUrls[Math.floor(Math.random() * acceptImageUrls.length)]
+        : 'ok.png';
+      reasonText.textContent = reason;
 
     } else if (decision === '重新提問') {
       decisionImage.src = 'unknow.png';
-      reasonText.textContent = reason || '請說明清楚情況敘述等等。';
+      reasonText.textContent = reason;
+
     } else {
       decisionImage.src = '';
       reasonText.textContent = 'AI 回覆異常，無法判斷。';
